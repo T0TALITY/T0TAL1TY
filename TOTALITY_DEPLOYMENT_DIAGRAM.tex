@@ -1,0 +1,39 @@
+\documentclass[tikz,border=10pt]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows}
+
+\tikzstyle{startstop} = [rectangle, rounded corners, minimum width=3cm, minimum height=1cm,text centered, draw=black, fill=red!30]
+\tikzstyle{process} = [rectangle, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=blue!30]
+\tikzstyle{data} = [parallelogram, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=green!30]
+\tikzstyle{arrow} = [thick,->,>=stealth]
+
+\begin{document}
+
+\begin{tikzpicture}[node distance=2cm]
+
+% Nodes
+\node (mobile) [startstop] {Mobile App (Flutter)};
+\node (api) [process, below of=mobile] {Public API Endpoint (HTTPS)};
+\node (backend) [process, below of=api] {TOTALITY Backend (FastAPI)};
+\node (protocol) [process, below of=backend] {Protocol Engine + Governance Layer};
+\node (queue) [process, below of=protocol] {Task Queue / Redis / Worker Mesh};
+\node (storage) [data, right of=queue, xshift=7cm] {Persistent Storage (PostgreSQL + Objects)};
+\node (telemetry) [process, left of=queue, xshift=-7cm] {Live Telemetry Dashboard};
+\node (release) [startstop, below of=queue, yshift=-1cm] {TOTALITY_RELEASE_PACKAGE.tar.gz + SHA256};
+
+% Arrows
+\draw [arrow] (mobile) -- (api);
+\draw [arrow] (api) -- (backend);
+\draw [arrow] (backend) -- (protocol);
+\draw [arrow] (protocol) -- (queue);
+\draw [arrow] (queue.east) -- (storage.west);
+\draw [arrow] (queue.west) -- (telemetry.east);
+\draw [arrow] (queue.south) -- (release.north);
+
+% Optional labels
+\node [below of=mobile, yshift=0.3cm, xshift=3cm] {User commands / AI requests};
+\node [below of=release, yshift=-0.3cm] {Ready for distribution & deployment};
+
+\end{tikzpicture}
+
+\end{document}
