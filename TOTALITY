@@ -1,0 +1,105 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# ===========================================================
+# TOTALITY ULTIMATE MASTER RELEASE SCRIPT
+# Consolidated, hotfixed, permissions-ready, checksum included
+# ===========================================================
+
+echo
+echo "🚀 TOTALITY — ULTIMATE MASTER RELEASE SCRIPT"
+echo
+
+# 1️⃣ Ensure storage permissions & wake-lock
+termux-setup-storage >/dev/null 2>&1 || true
+termux-wake-lock
+echo "🔹 Storage & wake-lock ready"
+
+# 2️⃣ Update Termux and install dependencies
+pkg update -y && pkg upgrade -y
+pkg install python git wget curl unzip redis termux-api flutter rsync -y
+
+# 3️⃣ Define project paths
+TOTALITY_DIR=~/TOTALITY_RELEASE_BUILD
+SCORCE_DIR=$TOTALITY_DIR/SCORCE_all
+SCORCE_UPDATED_DIR=$TOTALITY_DIR/SCORCE_all_updated
+LOG_DIR=$TOTALITY_DIR/logs
+APP_DIR=$TOTALITY_DIR/app
+
+# 4️⃣ Ensure all directories exist
+mkdir -p "$TOTALITY_DIR" "$SCORCE_DIR" "$SCORCE_UPDATED_DIR" "$LOG_DIR" "$APP_DIR"
+
+# 5️⃣ Fix execution permissions
+chmod -R +x "$TOTALITY_DIR"
+
+# 6️⃣ Purge old environment & caches
+rm -rf "$TOTALITY_DIR/backend/__pycache__" "$TOTALITY_DIR/backend/protocol/__pycache__"
+rm -rf "$APP_DIR/build" "$SCORCE_UPDATED_DIR/*" "$LOG_DIR/*"
+mkdir -p "$LOG_DIR"
+
+# 7️⃣ Prefill SCORCE_all with hotfix applied
+if [ -d "$SCORCE_DIR/.git" ]; then
+    cd "$SCORCE_DIR"
+    git reset --hard
+    git pull origin main
+else
+    git clone https://github.com/your-repo/SCORCE_all.git "$SCORCE_DIR"
+fi
+
+# 8️⃣ Sync SCORCE_all -> updated
+rsync -a --delete "$SCORCE_DIR/" "$SCORCE_UPDATED_DIR/"
+
+# 9️⃣ Install backend dependencies
+cd "$TOTALITY_DIR/backend"
+pip3 install --upgrade pip
+pip3 install -r requirements.txt
+
+# 🔟 Flutter dependencies and build
+cd "$APP_DIR"
+flutter clean
+flutter pub get
+flutter build apk --release
+
+# 1️⃣1️⃣ Start Redis
+nohup redis-server >> "$LOG_DIR/redis.log" 2>&1 &
+# 1️⃣2️⃣ Start Celery workers
+nohup celery -A tasks worker --loglevel=info >> "$LOG_DIR/celery.log" 2>&1 &
+# 1️⃣3️⃣ Start Backend
+nohup python3 "$TOTALITY_DIR/backend/main.py" >> "$LOG_DIR/backend.log" 2>&1 &
+
+# 1️⃣4️⃣ Generate LaTeX PDF
+cd "$TOTALITY_DIR"
+pdflatex TOTALITY_FULL_BUILD.tex >/dev/null 2>&1
+
+# 1️⃣5️⃣ Persistent launcher
+BASHRC=~/.bashrc
+if ! grep -q "TOTALITY_ULTIMATE_MASTER" "$BASHRC"; then
+    echo -e "\n# AUTO-START TOTALITY ULTIMATE MASTER\nTOTALITY_LAUNCHER=$TOTALITY_DIR/TOTALITY_MASTER_RELEASE.sh\nif [ -f \"\$TOTALITY_LAUNCHER\" ]; then\n  nohup bash \"\$TOTALITY_LAUNCHER\" >/dev/null 2>&1 &\nfi" >> "$BASHRC"
+fi
+
+# 1️⃣6️⃣ Open telemetry dashboard
+if command -v termux-open >/dev/null 2>&1; then
+    termux-open "http://127.0.0.1:8000/logs"
+fi
+
+# 1️⃣7️⃣ Create fully packaged release with checksum
+RELEASE_TAR=$TOTALITY_DIR/TOTALITY_RELEASE_PACKAGE.tar.gz
+echo "🔹 Packaging release..."
+tar -czvf "$RELEASE_TAR" \
+    backend/ SCORCE_all/ SCORCE_all_updated/ app/ TOTALITY_CLEAN_BUILD/ \
+    datasets/ docs/ TOTALITY_FULL_BUILD.pdf TOTALITY_MASTER_RELEASE.sh android.bp README.md
+
+# 1️⃣8️⃣ Generate SHA256 checksum
+sha256sum "$RELEASE_TAR" > "$TOTALITY_DIR/TOTALITY_RELEASE_PACKAGE.sha256"
+
+# 1️⃣9️⃣ Finish
+echo
+echo "✅ TOTALITY ULTIMATE RELEASE COMPLETE!"
+echo "Release package: $RELEASE_TAR"
+echo "Checksum file: $TOTALITY_DIR/TOTALITY_RELEASE_PACKAGE.sha256"
+echo "Processes running: Backend + Celery Workers + Redis"
+echo "Flutter APK: $APP_DIR/build/app/outputs/flutter-apk/app-release.apk"
+echo "PDF documentation: $TOTALITY_DIR/TOTALITY_FULL_BUILD.pdf"
+echo "Logs: $LOG_DIR"
+echo
+echo "Use 'pkill -f python; pkill -f celery; pkill -f redis-server' to stop all processes"
+echo
+echo "💡 Re-run this script anytime to fully update, rebuild, hotfix, and repackage TOTALITY"
