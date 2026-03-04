@@ -1,181 +1,228 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ─────────────────────────────────────────────
 # T0TAL1TY MEGA DEPLOY
-# Termux/Linux – LLM + AI + Multi-chain + Smart Contract + Data Throughput
-# Fully Populated, Encrypted Wallets, Dashboard, PDF Reports
+# Cross-platform bootstrap (Termux + Linux)
 # ─────────────────────────────────────────────
 
-echo "[→] Launching T0TAL1TY Mega Deploy..."
+set -euo pipefail
 
-# 1️⃣ Install dependencies
-if command -v pkg &>/dev/null; then
-    pkg update -y && pkg upgrade -y
-    pkg install python git wget nano -y
-elif command -v apt &>/dev/null; then
-    sudo apt update && sudo apt upgrade -y
-    sudo apt install python3 python3-pip git wget nano -y
+log() { printf '[→] %s\n' "$1"; }
+warn() { printf '[!] %s\n' "$1"; }
+
+log "Launching T0TAL1TY Mega Deploy..."
+
+if ! command -v python3 >/dev/null 2>&1 && ! command -v python >/dev/null 2>&1; then
+  warn "Python is not installed yet; dependency setup will attempt to install it."
 fi
-pip install flask web3 cryptography python-dotenv reportlab pandas matplotlib
 
-# 2️⃣ Create secure .env
-cat <<'EOF' > ~/.t0tal1ty_env
+install_base_deps() {
+  if command -v pkg >/dev/null 2>&1; then
+    log "Detected Termux package manager (pkg)."
+    pkg update -y
+    pkg upgrade -y
+    pkg install -y python git wget nano openssl
+  elif command -v apt >/dev/null 2>&1; then
+    log "Detected apt package manager."
+    if command -v sudo >/dev/null 2>&1; then
+      sudo apt update
+      sudo apt upgrade -y
+      sudo apt install -y python3 python3-pip git wget nano openssl
+    else
+      apt update
+      apt upgrade -y
+      apt install -y python3 python3-pip git wget nano openssl
+    fi
+  else
+    warn "No supported package manager found (expected pkg or apt)."
+  fi
+}
+
+install_python_deps() {
+  local -a pip_cmd
+  if command -v pip3 >/dev/null 2>&1; then
+    pip_cmd=(pip3)
+  elif command -v pip >/dev/null 2>&1; then
+    pip_cmd=(pip)
+  else
+    warn "pip not found. Attempting python3 -m ensurepip."
+    python3 -m ensurepip --upgrade || true
+    pip_cmd=(python3 -m pip)
+  fi
+  log "Installing Python packages..."
+  "${pip_cmd[@]}" install --upgrade pip
+  "${pip_cmd[@]}" install flask web3 cryptography python-dotenv reportlab pandas matplotlib
+}
+
+write_env_file() {
+  local env_file="$HOME/.t0tal1ty_env"
+  if [[ -f "$env_file" ]]; then
+    warn "Existing ~/.t0tal1ty_env found; leaving it in place."
+    return
+  fi
+
+  cat > "$env_file" <<ENV
 WALLET_ADDRESS=0xaDdA355265aEe4776D45f3F2f18f0c8396A7f14C
-ENCRYPTED_KEY_FILE=~/totality_termux/ai_models/totality_llm/wallet.enc
-INFURA_KEY=YOUR_INFURA_KEY
+ENCRYPTED_KEY_FILE=$HOME/totality_termux/ai_models/totality_llm/wallet.enc
+ETHEREUM_RPC=https://mainnet.infura.io/v3/YOUR_INFURA_KEY
 POLYGON_RPC=https://polygon-rpc.com
 ARBITRUM_RPC=https://arb1.arbitrum.io/rpc
-EOF
+ENV
+  chmod 600 "$env_file"
+  log "Created $env_file"
+}
 
-# 3️⃣ Node paths
-NODES=("localhost:~/totality_termux")
-
-# 4️⃣ Wallet passphrase
-read -sp "Enter encrypted wallet passphrase: " WALLET_PASSPHRASE
-echo
-
-# 5️⃣ Deploy Nodes with LLM datasets
 deploy_node() {
-    NODE_PATH=$1
-    mkdir -p $NODE_PATH/{ai_models/totality_llm/datasets,config,dashboard,reports,logs,scripts}
+  local node_path="$1"
+  mkdir -p "$node_path"/{ai_models/totality_llm/datasets,config,dashboard,reports,logs,scripts}
 
-    # Populate LLM datasets
-    echo "ALL_ACADEMIC_WORKS" > $NODE_PATH/ai_models/totality_llm/datasets/academic.txt
-    echo "ALL_OFFICIAL_WORKS" > $NODE_PATH/ai_models/totality_llm/datasets/official.txt
-    echo "ALL_CODING_PROJECTS" > $NODE_PATH/ai_models/totality_llm/datasets/coding.txt
+  printf 'ALL_ACADEMIC_WORKS\n' > "$node_path/ai_models/totality_llm/datasets/academic.txt"
+  printf 'ALL_OFFICIAL_WORKS\n' > "$node_path/ai_models/totality_llm/datasets/official.txt"
+  printf 'ALL_CODING_PROJECTS\n' > "$node_path/ai_models/totality_llm/datasets/coding.txt"
 
-    # Multi-chain config
-    cat <<'EOF' > $NODE_PATH/config/chains.json
+  cat > "$node_path/config/chains.json" <<'JSON'
 {
   "ethereum_mainnet": {"rpc": "https://mainnet.infura.io/v3/YOUR_INFURA_KEY", "chain_id": 1},
   "polygon_mainnet": {"rpc": "https://polygon-rpc.com", "chain_id": 137},
   "arbitrum_mainnet": {"rpc": "https://arb1.arbitrum.io/rpc", "chain_id": 42161}
 }
-EOF
+JSON
 
-    echo "encrypted_wallet_key" > $NODE_PATH/ai_models/totality_llm/wallet.enc
+  if [[ ! -f "$node_path/ai_models/totality_llm/wallet.enc" ]]; then
+    printf 'encrypted_wallet_key\n' > "$node_path/ai_models/totality_llm/wallet.enc"
+  fi
 }
-for NODE in "${NODES[@]}"; do
-    deploy_node ${NODE#*:} &
-done
-wait
 
-# 6️⃣ Global AI + Throughput + Smart Contract Coordinator
-cat <<'EOF' > global_ai_smart.py
+write_python_launcher() {
+cat > global_ai_smart.py <<'PYEOF'
 #!/usr/bin/env python3
-import os, subprocess, threading, time, random, json, pandas as pd
-from flask import Flask, request, jsonify
-from web3 import Web3
+import os
+import subprocess
+import threading
+import time
+from pathlib import Path
+
+import pandas as pd
 from dotenv import load_dotenv
+from flask import Flask, jsonify, request
 from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
 from reportlab.lib.units import cm
+from reportlab.pdfgen import canvas
+from web3 import Web3
 
 app = Flask(__name__)
-load_dotenv(os.path.expanduser("~/.t0tal1ty_env"))
+load_dotenv(Path.home() / ".t0tal1ty_env")
 
-NODES = [{"name":"Node1","path":"~/totality_termux"}]
+BASE_PATH = Path.home() / "totality_termux"
+REPORT_PATH = BASE_PATH / "reports" / "Totality_Report_Smart.pdf"
+REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+NODES = [{"name": "Node1", "path": str(BASE_PATH)}]
 NODE_STATUS = {}
-DATA_LOG = pd.DataFrame(columns=["timestamp","node","chain","balance","queries","tx_sent"])
+DATA_LOG = pd.DataFrame(columns=["timestamp", "node", "chain", "balance", "queries", "tx_sent"])
 
-# Web3 Setup
 CHAINS = {
-    "ethereum_mainnet": {"rpc": os.getenv("INFURA_KEY"), "chain_id": 1},
-    "polygon_mainnet": {"rpc": os.getenv("POLYGON_RPC"), "chain_id": 137},
-    "arbitrum_mainnet": {"rpc": os.getenv("ARBITRUM_RPC"), "chain_id": 42161}
+    "ethereum_mainnet": {"rpc": os.getenv("ETHEREUM_RPC", ""), "chain_id": 1},
+    "polygon_mainnet": {"rpc": os.getenv("POLYGON_RPC", ""), "chain_id": 137},
+    "arbitrum_mainnet": {"rpc": os.getenv("ARBITRUM_RPC", ""), "chain_id": 42161},
 }
-WEB3_INSTANCES = {k: Web3(Web3.HTTPProvider(v["rpc"])) for k,v in CHAINS.items()}
+WEB3_INSTANCES = {
+    chain: Web3(Web3.HTTPProvider(cfg["rpc"]))
+    for chain, cfg in CHAINS.items()
+    if cfg["rpc"]
+}
 
-# Decrypt wallet in memory
-def decrypt_wallet(enc_path, passphrase):
-    cmd = f"openssl aes-256-cbc -d -in {enc_path} -pass pass:{passphrase}"
-    key = subprocess.check_output(cmd, shell=True)
-    return key.decode().strip()
 
-WALLET_KEY = decrypt_wallet(os.getenv("ENCRYPTED_KEY_FILE"), input("Wallet passphrase for deploy: "))
+def decrypt_wallet(enc_path: str, passphrase: str) -> str:
+    if not enc_path or not Path(enc_path).expanduser().exists():
+        return ""
+    cmd = [
+        "openssl",
+        "aes-256-cbc",
+        "-d",
+        "-in",
+        str(Path(enc_path).expanduser()),
+        "-pass",
+        f"pass:{passphrase}",
+    ]
+    return subprocess.check_output(cmd, text=True).strip()
 
-# Node monitoring + logging
-def monitor_nodes():
+
+def monitor_nodes() -> None:
     global DATA_LOG
     while True:
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         for node in NODES:
-            node_name = node["name"]
             balances = {}
             for chain_name, web3_inst in WEB3_INSTANCES.items():
                 try:
-                    balance = web3_inst.eth.get_balance(os.getenv("WALLET_ADDRESS"))
-                    balance_eth = web3_inst.fromWei(balance,'ether')
+                    raw_balance = web3_inst.eth.get_balance(os.getenv("WALLET_ADDRESS"))
+                    balance_eth = float(web3_inst.from_wei(raw_balance, "ether"))
                     balances[chain_name] = balance_eth
-                    DATA_LOG = pd.concat([DATA_LOG, pd.DataFrame([{
-                        "timestamp":timestamp,"node":node_name,"chain":chain_name,
-                        "balance":balance_eth,"queries":0,"tx_sent":0
-                    }])], ignore_index=True)
-                except:
+                except Exception:
                     balances[chain_name] = 0.0
-            NODE_STATUS[node_name] = {
-                "AI_status":"active",
-                "LLM_loaded":True,
-                "last_report":timestamp,
-                "multi_chain_balance":balances
+
+                DATA_LOG = pd.concat(
+                    [
+                        DATA_LOG,
+                        pd.DataFrame(
+                            [
+                                {
+                                    "timestamp": timestamp,
+                                    "node": node["name"],
+                                    "chain": chain_name,
+                                    "balance": balances[chain_name],
+                                    "queries": 0,
+                                    "tx_sent": 0,
+                                }
+                            ]
+                        ),
+                    ],
+                    ignore_index=True,
+                )
+            NODE_STATUS[node["name"]] = {
+                "AI_status": "active",
+                "LLM_loaded": True,
+                "last_report": timestamp,
+                "multi_chain_balance": balances,
             }
         time.sleep(10)
 
-# LLM query API with optional contract payment
+
 @app.route("/api/query", methods=["POST"])
 def query_llm():
     global DATA_LOG
-    data = request.json
-    query = data.get("query","")
+    payload = request.get_json(silent=True) or {}
+    query = payload.get("query", "")
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+
     for node in NODES:
-        DATA_LOG = pd.concat([DATA_LOG, pd.DataFrame([{
-            "timestamp":timestamp,"node":node["name"],"chain":"LLM",
-            "balance":0,"queries":1,"tx_sent":0
-        }])], ignore_index=True)
+        DATA_LOG = pd.concat(
+            [
+                DATA_LOG,
+                pd.DataFrame(
+                    [
+                        {
+                            "timestamp": timestamp,
+                            "node": node["name"],
+                            "chain": "LLM",
+                            "balance": 0,
+                            "queries": 1,
+                            "tx_sent": 0,
+                        }
+                    ]
+                ),
+            ],
+            ignore_index=True,
+        )
+
     return jsonify({"result": f"LLM Response: '{query}'"})
 
-# Optional smart contract payment
-def send_contract_payment(contract_address, abi, function_name, value_eth=0.01):
-    web3 = WEB3_INSTANCES["ethereum_mainnet"]
-    contract = web3.eth.contract(address=contract_address, abi=abi)
-    nonce = web3.eth.get_transaction_count(os.getenv("WALLET_ADDRESS"))
-    tx = contract.functions[function_name]().buildTransaction({
-        'from': os.getenv("WALLET_ADDRESS"),
-        'value': web3.toWei(value_eth,'ether'),
-        'gas':300000,'gasPrice':web3.toWei('50','gwei'),
-        'nonce':nonce,'chainId':1
-    })
-    signed_tx = web3.eth.account.sign_transaction(tx, WALLET_KEY)
-    confirm = input(f"Send {value_eth} ETH to {contract_address}? (yes/no) ")
-    if confirm.lower()=="yes":
-        tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-        print(f"Transaction sent: {tx_hash.hex()}")
-        return tx_hash.hex()
-    return None
 
-# PDF report every 60s
-def generate_pdf_reports():
-    global DATA_LOG
-    while True:
-        c = canvas.Canvas("~/totality_termux/reports/Totality_Report_Smart.pdf", pagesize=A4)
-        width, height = A4
-        c.setFont("Helvetica-Bold", 18)
-        c.drawCentredString(width/2, height-2*cm, "T0TAL1TY Live Throughput + Smart Contract Report")
-        c.setFont("Helvetica", 12)
-        y = height - 4*cm
-        for idx,row in DATA_LOG.tail(50).iterrows():
-            c.drawString(2*cm, y, f"{row['timestamp']} | {row['node']} | {row['chain']} | Balance: {row['balance']} | Queries: {row['queries']} | Tx: {row['tx_sent']}")
-            y -= 1*cm
-        c.showPage()
-        c.save()
-        time.sleep(60)
-
-# Node status API
 @app.route("/api/nodes")
 def api_nodes():
     return jsonify(NODE_STATUS)
 
-# Dashboard
+
 @app.route("/")
 def index():
     return """
@@ -189,13 +236,15 @@ def index():
 <button onclick="submitQuery()">Query LLM</button>
 <p id="queryResult"></p>
 <script>
+let chart;
 async function updateChart(){
     const res = await fetch('/api/nodes');
     const data = await res.json();
     const labels = Object.keys(data);
-    const balances = labels.map(n=>Object.values(data[n].multi_chain_balance).reduce((a,b)=>a+b,0));
+    const balances = labels.map(n=>Object.values(data[n].multi_chain_balance || {}).reduce((a,b)=>a+b,0));
     const ctx = document.getElementById('balanceChart').getContext('2d');
-    new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'Aggregate Balance (ETH)',data:balances,backgroundColor:'lime'}]}});
+    if (chart) chart.destroy();
+    chart = new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'Aggregate Balance (ETH)',data:balances,backgroundColor:'lime'}]}});
 }
 setInterval(updateChart,5000);
 updateChart();
@@ -210,13 +259,58 @@ async function submitQuery(){
 </html>
 """
 
-if __name__=="__main__":
-    threading.Thread(target=monitor_nodes,daemon=True).start()
-    threading.Thread(target=generate_pdf_reports,daemon=True).start()
+
+def generate_pdf_reports() -> None:
+    global DATA_LOG
+    while True:
+        pdf = canvas.Canvas(str(REPORT_PATH), pagesize=A4)
+        width, height = A4
+        pdf.setFont("Helvetica-Bold", 18)
+        pdf.drawCentredString(width / 2, height - 2 * cm, "T0TAL1TY Live Throughput + Smart Contract Report")
+        pdf.setFont("Helvetica", 10)
+        y = height - 3.5 * cm
+
+        for _, row in DATA_LOG.tail(50).iterrows():
+            line = f"{row['timestamp']} | {row['node']} | {row['chain']} | Balance: {row['balance']} | Queries: {row['queries']} | Tx: {row['tx_sent']}"
+            pdf.drawString(1.5 * cm, y, line[:130])
+            y -= 0.65 * cm
+            if y < 2 * cm:
+                pdf.showPage()
+                pdf.setFont("Helvetica", 10)
+                y = height - 2 * cm
+
+        pdf.save()
+        time.sleep(60)
+
+
+if __name__ == "__main__":
+    encrypted_key_file = os.getenv("ENCRYPTED_KEY_FILE", "")
+    wallet_passphrase = os.getenv("WALLET_PASSPHRASE", "")
+    if not wallet_passphrase:
+        try:
+            wallet_passphrase = input("Wallet passphrase for deploy (optional): ").strip()
+        except EOFError:
+            wallet_passphrase = ""
+    if wallet_passphrase and encrypted_key_file:
+        try:
+            decrypt_wallet(encrypted_key_file, wallet_passphrase)
+            print("Wallet key decrypt check: OK")
+        except Exception as exc:
+            print(f"Wallet key decrypt check failed: {exc}")
+
+    threading.Thread(target=monitor_nodes, daemon=True).start()
+    threading.Thread(target=generate_pdf_reports, daemon=True).start()
     app.run(host="0.0.0.0", port=5000)
-EOF
-
+PYEOF
 chmod +x global_ai_smart.py
+}
 
-# 7️⃣ Launch Mega Deploy
+install_base_deps
+install_python_deps
+write_env_file
+
+deploy_node "$HOME/totality_termux"
+write_python_launcher
+
+log "Starting global_ai_smart.py"
 python3 global_ai_smart.py
