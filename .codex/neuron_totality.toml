@@ -1,0 +1,138 @@
+# ==========================
+# Neuron TOTALITY Upgrade
+# Codex-style Multi-Agent Command Center
+# Version: 1.0.0
+# Author: Ben Waugh
+# ==========================
+
+[system]
+name = "Neuron TOTALITY"
+mode = "NEXUS PRO"
+description = """
+Multi-agent framework for automated task execution, skill management, self-verification,
+and ask-driven interactions. Inspired by OpenAI Codex app architecture.
+"""
+default_model = "GPT-5.3-Codex-Spark"
+sandbox_mode = true
+voice_enabled = true
+cloud_delegate_enabled = true
+headless_CI = true
+agent_threads = 16
+
+# ==========================
+# Profiles
+# ==========================
+[profiles.fast]
+description = "Fast responses, low reasoning effort, suitable for minor edits"
+model = "GPT-5.3-Codex-Spark"
+reasoning_effort = "low"
+sandbox = true
+
+[profiles.deep]
+description = "Deep analysis, full verification, multi-step task execution"
+model = "GPT-5.3-Codex"
+reasoning_effort = "high"
+sandbox = true
+
+# ==========================
+# Skills Catalog
+# ==========================
+[skills]
+linear = "Manage Linear boards, triage bugs, track releases"
+cloud_deploy = "Deploy apps to Vercel, Netlify, Cloudflare, Render"
+image_gen = "Generate/edit images for UI, websites, game assets"
+document = "Create/edit PDFs, spreadsheets, Word docs"
+figma = "Translate Figma designs into production-ready code"
+openai_api = "Reference OpenAI API docs and generate code snippets"
+yeet = "Commit, create PR, draft, and publish automatically"
+
+# ==========================
+# Automations
+# ==========================
+[automations.morning_commit_pulse]
+description = "Daily summary of commits and activity"
+schedule = "0 7 * * *" # every morning at 7 AM
+run = ["linear", "build_summary"]
+
+[automations.upsell_skill]
+description = "Self-improvement loop for skills and efficiency"
+schedule = "0 3 * * *" # every night at 3 AM
+run = ["skill_analysis", "auto_update"]
+
+[automations.random_bug_hunt]
+description = "Random file bug detection and auto-fix"
+schedule = "*/4 * * * *" # every 4 hours
+run = ["bug_scan", "auto_fix"]
+
+[automations.green_prs]
+description = "Resolve PR conflicts intelligently and auto-update base"
+schedule = "*/6 * * * *" # every 6 hours
+run = ["check_PRs", "resolve_conflicts"]
+
+[automations.AGENTS_md_update]
+description = "Auto-update AGENTS.md with latest TL;DR & progress"
+schedule = "0 */6 * * *" # every 6 hours
+run = ["context_scan", "update_AGENTS_md"]
+
+# ==========================
+# Ask Features
+# ==========================
+[ask_features]
+"deploy_project" = "Use cloud_deploy skill to push code, generate PR summary, and run verification"
+"verify_feature" = "Self-verify feature end-to-end, including logs, tests, and output correctness"
+"bug_hunt" = "Scan project, detect latent bugs, generate fixes"
+"update_skill" = "Improve a skill based on recent task failures or performance"
+"switch_profile" = "Switch agent profile dynamically (fast/deep)"
+"run_headless" = "Execute agent tasks headlessly and output structured JSON"
+"voice_command" = "Enable voice input for ask commands"
+
+# ==========================
+# AGENTS.md Template
+# ==========================
+[AGENTS_md]
+description = "Context file loaded automatically for each agent session"
+project_summary = "Neuron TOTALITY multi-agent platform for automated workflows"
+workflow = ["task delegation", "self-verification", "cloud execution", "ask-driven tasks"]
+test_pipeline = ["unit tests", "integration tests", "observability logs"]
+notes = "Agents will auto-update this file every 6 hours via automations"
+
+# ==========================
+# Cloud & Remote Execution
+# ==========================
+[cloud]
+enabled = true
+max_parallel_tasks = 32
+delegate_on_idle = true
+
+# ==========================
+# Worktrees & Isolation
+# ==========================
+[worktrees]
+enabled = true
+max_per_project = 8
+auto_merge_best = true
+
+# ==========================
+# Security & Permissions
+# ==========================
+[security]
+sandbox_restrictions = ["limit file access", "require confirmation for network commands"]
+rules_file = ".rules"
+audit_enabled = true
+
+# ==========================
+# Logging & Self-Verification
+# ==========================
+[verification]
+enabled = true
+auto_test = ["run_unit_tests", "validate_logs", "QA_checks"]
+feedback_loop = true
+report_format = "JSON"
+
+# ==========================
+# Optional Visual & Voice Enhancements
+# ==========================
+[ui]
+voice_enabled = true
+popout_windows = true
+monitor_dashboards = true

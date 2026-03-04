@@ -1,0 +1,39 @@
+{
+  "agents": [
+    {
+      "name": "Planner",
+      "role": "Break goals into executable task plans",
+      "skills": ["planning", "task_decomposition", "risk_assessment"],
+      "allowed_actions": ["plan", "document"],
+      "workspace": ".codex/worktrees/planner"
+    },
+    {
+      "name": "Coder",
+      "role": "Implement code changes from accepted plans",
+      "skills": ["code_generation", "refactoring", "implementation"],
+      "allowed_actions": ["edit", "run_checks"],
+      "workspace": ".codex/worktrees/coder"
+    },
+    {
+      "name": "Reviewer",
+      "role": "Review diffs and enforce invariants",
+      "skills": ["code_review", "static_analysis", "invariant_checks"],
+      "allowed_actions": ["review", "comment"],
+      "workspace": ".codex/worktrees/reviewer"
+    },
+    {
+      "name": "Tester",
+      "role": "Execute verification loops and report failures",
+      "skills": ["testing", "linting", "smoke_checks"],
+      "allowed_actions": ["run_tests", "report"],
+      "workspace": ".codex/worktrees/tester"
+    },
+    {
+      "name": "Documenter",
+      "role": "Maintain runbooks, release notes, and usage docs",
+      "skills": ["documentation", "summarization", "change_tracking"],
+      "allowed_actions": ["document", "summarize"],
+      "workspace": ".codex/worktrees/documenter"
+    }
+  ]
+}
