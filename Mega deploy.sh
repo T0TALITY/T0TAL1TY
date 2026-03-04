@@ -15,38 +15,84 @@ if ! command -v python3 >/dev/null 2>&1 && ! command -v python >/dev/null 2>&1; 
   warn "Python is not installed yet; dependency setup will attempt to install it."
 fi
 
-install_base_deps() {
-  if command -v pkg >/dev/null 2>&1; then
-    log "Detected Termux package manager (pkg)."
-    pkg update -y
-    pkg upgrade -y
-    pkg install -y python git wget nano openssl
-  elif command -v apt >/dev/null 2>&1; then
-    log "Detected apt package manager."
-    if command -v sudo >/dev/null 2>&1; then
-      sudo apt update
-      sudo apt upgrade -y
-      sudo apt install -y python3 python3-pip git wget nano openssl
-    else
-      apt update
-      apt upgrade -y
-      apt install -y python3 python3-pip git wget nano openssl
+detect_pkg_manager() {
+  for pm in pkg apt-get apt dnf yum pacman apk; do
+    if command -v "$pm" >/dev/null 2>&1; then
+      echo "$pm"
+      return
     fi
-  else
-    warn "No supported package manager found (expected pkg or apt)."
-  fi
+  done
+  echo ""
+}
+
+install_base_deps() {
+  local pm
+  pm="$(detect_pkg_manager)"
+
+  case "$pm" in
+    pkg)
+      log "Detected Termux package manager (pkg)."
+      pkg update -y
+      pkg upgrade -y
+      pkg install -y python git wget nano openssl curl tar unzip rsync
+      ;;
+    apt|apt-get)
+      log "Detected apt package manager."
+      if command -v sudo >/dev/null 2>&1; then
+        sudo "$pm" update
+        sudo "$pm" upgrade -y
+        sudo "$pm" install -y python3 python3-pip git wget nano openssl curl tar unzip rsync
+      else
+        "$pm" update
+        "$pm" upgrade -y
+        "$pm" install -y python3 python3-pip git wget nano openssl curl tar unzip rsync
+      fi
+      ;;
+    dnf|yum)
+      log "Detected $pm package manager."
+      if command -v sudo >/dev/null 2>&1; then
+        sudo "$pm" install -y python3 python3-pip git wget nano openssl curl tar unzip rsync
+      else
+        "$pm" install -y python3 python3-pip git wget nano openssl curl tar unzip rsync
+      fi
+      ;;
+    pacman)
+      log "Detected pacman package manager."
+      if command -v sudo >/dev/null 2>&1; then
+        sudo pacman -Sy --noconfirm python python-pip git wget nano openssl curl tar unzip rsync
+      else
+        pacman -Sy --noconfirm python python-pip git wget nano openssl curl tar unzip rsync
+      fi
+      ;;
+    apk)
+      log "Detected apk package manager."
+      if command -v sudo >/dev/null 2>&1; then
+        sudo apk add --no-cache python3 py3-pip git wget nano openssl curl tar unzip rsync
+      else
+        apk add --no-cache python3 py3-pip git wget nano openssl curl tar unzip rsync
+      fi
+      ;;
+    *)
+      warn "No supported package manager found (pkg/apt/dnf/yum/pacman/apk)."
+      ;;
+  esac
 }
 
 install_python_deps() {
   local -a pip_cmd
+  local py_bin="python3"
+  if ! command -v python3 >/dev/null 2>&1 && command -v python >/dev/null 2>&1; then
+    py_bin="python"
+  fi
+
   if command -v pip3 >/dev/null 2>&1; then
     pip_cmd=(pip3)
   elif command -v pip >/dev/null 2>&1; then
     pip_cmd=(pip)
   else
-    warn "pip not found. Attempting python3 -m ensurepip."
-    python3 -m ensurepip --upgrade || true
-    pip_cmd=(python3 -m pip)
+    warn "pip not found. Attempting $py_bin -m ensurepip."
+    "$py_bin" -m ensurepip --upgrade || true
+    pip_cmd=($py_bin -m pip)
   fi
   log "Installing Python packages..."
   "${pip_cmd[@]}" install --upgrade pip
@@ -313,4 +359,4 @@ deploy_node "$HOME/totality_termux"
 write_python_launcher
 
 log "Starting global_ai_smart.py"
-python3 global_ai_smart.py
+python3 global_ai_smart.py || python global_ai_smart.py

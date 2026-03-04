@@ -10,12 +10,41 @@ log() { echo "🔹 $1"; }
 warn() { echo "⚠️ $1"; }
 fail() { echo "❌ $1"; exit 1; }
 
+detect_pkg_manager() {
+  for pm in pkg apt-get apt dnf yum pacman apk; do
+    if command -v "$pm" >/dev/null 2>&1; then
+      echo "$pm"
+      return
+    fi
+  done
+  echo ""
+}
+
+install_missing_dep() {
+  local dep="$1"
+  local pm="$2"
+
+  case "$pm" in
+    pkg) pkg install -y "$dep" ;;
+    apt|apt-get)
+      if command -v sudo >/dev/null 2>&1; then sudo "$pm" install -y "$dep"; else "$pm" install -y "$dep"; fi ;;
+    dnf|yum)
+      if command -v sudo >/dev/null 2>&1; then sudo "$pm" install -y "$dep"; else "$pm" install -y "$dep"; fi ;;
+    pacman)
+      if command -v sudo >/dev/null 2>&1; then sudo pacman -Sy --noconfirm "$dep"; else pacman -Sy --noconfirm "$dep"; fi ;;
+    apk)
+      if command -v sudo >/dev/null 2>&1; then sudo apk add --no-cache "$dep"; else apk add --no-cache "$dep"; fi ;;
+    *) fail "Missing dependency '$dep' and no supported package manager detected" ;;
+  esac
+}
+
 echo
 echo "🚀 TOTALITY — ONE-STEP DEPLOY"
 echo
 
-if ! command -v pkg >/dev/null 2>&1; then
-  warn "This script is optimized for Termux (pkg not found). Continuing with existing tools..."
+PM="$(detect_pkg_manager)"
+if [[ -z "$PM" ]]; then
+  warn "No known package manager detected; will only use existing dependencies"
 fi
 
 # 1) Optional Termux setup (safe no-op elsewhere)
@@ -31,22 +60,20 @@ log "Storage and wake-lock step completed"
 DEPS=(git wget curl unzip rsync tar sha256sum)
 for dep in "${DEPS[@]}"; do
   if ! command -v "$dep" >/dev/null 2>&1; then
-    if command -v pkg >/dev/null 2>&1; then
-      log "Installing missing package: $dep"
-      pkg install -y "$dep"
-    else
-      fail "Missing required dependency: $dep"
-    fi
+    log "Installing missing package: $dep"
+    install_missing_dep "$dep" "$PM"
   fi
 done
 
 if ! command -v python >/dev/null 2>&1 && ! command -v python3 >/dev/null 2>&1; then
-  if command -v pkg >/dev/null 2>&1; then
-    log "Installing missing package: python"
-    pkg install -y python
-  else
-    fail "Missing required dependency: python/python3"
-  fi
+  log "Installing missing package: python3"
+  case "$PM" in
+    pkg) install_missing_dep python "$PM" ;;
+    pacman) install_missing_dep python "$PM" ;;
+    apk) install_missing_dep python3 "$PM" ;;
+    apt|apt-get|dnf|yum) install_missing_dep python3 "$PM" ;;
+    *) fail "Missing required dependency: python/python3" ;;
+  esac
 fi
 
 for opt_dep in redis-server flutter; do
@@ -108,7 +135,6 @@ validate_prepublish_layout() {
 }
 
 resolve_master_script() {
-  # Standard release locations
   if [[ -z "$MASTER_SCRIPT" ]]; then
     if [[ -f "$TARGET_DIR/TOTALITY_MASTER_RELEASE.sh" ]]; then
       MASTER_SCRIPT="$TARGET_DIR/TOTALITY_MASTER_RELEASE.sh"
