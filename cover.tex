@@ -1,0 +1,44 @@
+\documentclass{article}
+\usepackage{titling}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+% -------------------------------
+% Prefilled Metadata
+% -------------------------------
+\title{TOTALITY Nexus Project: CAM/3iAtlas Thesis}
+\author{Ben Waugh}
+\date{March 2026}
+\newcommand{\institution}{TOTALITY Research Initiative}
+\newcommand{\datasetlink}{\href{https://github.com/BenWaugh/TOTALITY-Datasets}{TOTALITY Datasets GitHub}}
+\newcommand{\orchildetails}{Orchid ID: 0000-0002-XXXX-XXXX} % Replace with your actual ORCID
+
+% -------------------------------
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+
+    % Logo
+    \includegraphics[width=0.25\textwidth]{logo.png} \\[1cm]
+
+    % Title
+    {\huge \bfseries \thetitle \par}
+    \vspace{1.5cm}
+
+    % Author & Institution
+    {\Large \theauthor \par}
+    {\large \institution \par}
+    {\large \orchildetails \par}
+    \vspace{1cm}
+
+    % Date
+    {\large \thedate \par}
+    \vfill
+
+    % Dataset / GitHub link
+    {\large Datasets \& Code: \datasetlink \par}
+\end{titlepage}
+
+\end{document}

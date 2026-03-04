@@ -1,0 +1,77 @@
+\documentclass[12pt]{report}
+\usepackage{titling}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{natbib}
+
+% -------------------------------
+% Prefilled Metadata
+% -------------------------------
+\title{TOTALITY Nexus Project: CAM/3iAtlas Thesis}
+\author{Ben Waugh}
+\date{March 2026}
+\newcommand{\institution}{TOTALITY Research Initiative}
+\newcommand{\datasetlink}{\href{https://github.com/BenWaugh/TOTALITY-Datasets}{TOTALITY Datasets GitHub}}
+\newcommand{\orchildetails}{Orchid ID: 0000-0002-XXXX-XXXX}
+
+\begin{document}
+
+% -------------------------------
+% Cover Page
+% -------------------------------
+\begin{titlepage}
+\centering
+\vspace*{2cm}
+
+\includegraphics[width=0.25\textwidth]{logo.png} \\[1cm]
+
+{\huge \bfseries \thetitle \par}
+\vspace{1.5cm}
+
+{\Large \theauthor \par}
+{\large \institution \par}
+{\large \orchildetails \par}
+\vspace{1cm}
+
+{\large \thedate \par}
+\vfill
+
+{\large Datasets \& Code: \datasetlink \par}
+\end{titlepage}
+
+\tableofcontents
+\clearpage
+
+% -------------------------------
+% Chapters
+% -------------------------------
+\chapter{Introduction}
+\input{chapters/introduction.tex}
+
+\chapter{Methodology}
+\input{chapters/methodology.tex}
+
+\chapter{Results}
+\input{chapters/results.tex}
+
+\chapter{Discussion}
+\input{chapters/discussion.tex}
+
+\chapter{Conclusion}
+\input{chapters/conclusion.tex}
+
+% -------------------------------
+% Appendices
+% -------------------------------
+\appendix
+\chapter{Datasets Overview}
+Datasets auto-synced from GitHub: \datasetlink
+
+\chapter{Figures}
+All figures in ./figures are included from chapter content using \texttt{\textbackslash includegraphics}.
+
+\chapter{References}
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}
