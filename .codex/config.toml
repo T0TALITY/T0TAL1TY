@@ -1,0 +1,37 @@
+# TOTAL1TY SUPER RELEASE Codex IDE Configuration
+[workspace]
+root = "/TOTAL1TY_SUPER_RELEASE"
+combinedRelease = "/TOTAL1TY_SUPER_RELEASE/Combined_Release"
+logsDir = "/TOTAL1TY_SUPER_RELEASE/logs"
+
+[deployment]
+defaultModel = "codex-llm-v5"
+approvalRequired = false
+sandboxMode = true
+logLevel = "INFO"
+
+[modules]
+active = ["Research", "Engine_Designs", "Systems_Integrations", "Combined_Release"]
+
+[simulation]
+supersimulation = true
+hypersimulation = true
+hubbleVoyagerSim = true
+molten5D = true
+infinityBattery = true
+matterWhipSim = true
+
+[output]
+latexFile = "/TOTAL1TY_SUPER_RELEASE/Combined_Release/TOTAL1TY_LaTeX.tex"
+markdownFile = "/TOTAL1TY_SUPER_RELEASE/Combined_Release/TOTAL1TY_Markdown.md"
+appendicesDir = "/TOTAL1TY_SUPER_RELEASE/Combined_Release/Appendices"
+
+[telemetry]
+enableUVFeed = true
+enableLiveMonitoring = true
+
+[ide]
+commentCodeLensEnabled = true
+localeOverride = "en-US"
+openOnStartup = true
+runCodexInWindowsSubsystemForLinux = true

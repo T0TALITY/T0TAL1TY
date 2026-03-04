@@ -1,0 +1,19 @@
+{
+  "academic_tally": {
+    "Primary Name": {"Doctrines": 4, "Theses": 6, "Hypotheses": 3, "PhD": 2},
+    "StarNavigator": {"Doctrines": 5, "Theses": 2, "Hypotheses": 4, "PhD": 0},
+    "C.L. Orion": {"Doctrines": 2, "Theses": 3, "Hypotheses": 7, "PhD": 0},
+    "AstraLog": {"Doctrines": 2, "Theses": 1, "Hypotheses": 5, "PhD": 0},
+    "Dr. S. Vela": {"Doctrines": 0, "Theses": 1, "Hypotheses": 1, "PhD": 4},
+    "Captain's Quill": {"Doctrines": 1, "Theses": 0, "Hypotheses": 2, "PhD": 0}
+  },
+  "total_counts": {
+    "Doctrines": 14,
+    "Theses": 13,
+    "Hypotheses": 22,
+    "PhD-Level Works": 6,
+    "Total": 55
+  },
+  "source": "Combined tally provided by user (PDF + GPT search merge)",
+  "version": 1
+}

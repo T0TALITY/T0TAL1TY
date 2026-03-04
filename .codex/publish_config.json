@@ -1,0 +1,16 @@
+{
+  "versioning_mode": "hybrid",
+  "current_version": "v1.0.0",
+  "departments": [
+    "research",
+    "engineering",
+    "systems",
+    "qa",
+    "security",
+    "operations",
+    "documentation",
+    "release",
+    "analytics"
+  ],
+  "external_briefings_file": ".codex/external_briefings.json"
+}
