@@ -1,0 +1,57 @@
+{
+  "platform_name": "TOTALITY Performance Intelligence Platform",
+  "version": "0.9-PRV",
+  "classification": "Preflight Dyno Simulation & Adaptive Tuning Intelligence",
+  "modules": [
+    "Architecture Comparison Engine",
+    "Resonance Adjustable Parameter System",
+    "Thermal-Dynamic Sequence Simulator",
+    "Wear and Maintenance Forecast Engine",
+    "Upgrade Compatibility Bridge",
+    "Profile Auto-Mapping Layer",
+    "Workshop Constraint Advisor",
+    "Dyno Prediction Layer",
+    "Troubleshooting Intelligence Engine",
+    "Variant Strategy Generator"
+  ],
+  "artifacts_expected_local": [
+    "engine_variable_model.xlsx",
+    "engine_architecture_comparison.xlsx",
+    "engine_architecture_comparison_extended.xlsx",
+    "engine_architecture_comparison_crossover.xlsx",
+    "engine_architecture_resonance_adjustable.xlsx",
+    "engine_architecture_resonance_adjustable_summary.md",
+    "totality_deployment_package.zip",
+    "totality_production_pipeline.zip",
+    "totality_compat_pipeline.zip",
+    "totality_profile_bridge.zip",
+    "totality_upgrade_bridge.zip"
+  ],
+  "intended_use": [
+    "Pre-dyno simulation",
+    "Upgrade planning",
+    "Thermal risk prediction",
+    "Wear forecasting",
+    "Workshop sequencing",
+    "Tuning workflow intelligence",
+    "Variant productisation"
+  ],
+  "not_intended_use": [
+    "Direct ECU flashing",
+    "Autonomous engine control",
+    "Replacing dyno validation",
+    "OEM certification"
+  ],
+  "recommended_repo_layout": {
+    "supersim": [
+      "TOTALITY_SUPERSIM_MANIFEST.json",
+      "INVENTORY.md",
+      "README_DEPLOYMENT.md"
+    ],
+    "artifacts_local_only": [
+      "spreadsheets",
+      "pipeline_zips",
+      "reports"
+    ]
+  }
+}
